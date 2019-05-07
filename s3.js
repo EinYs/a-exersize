@@ -1,6 +1,6 @@
 const dotenv = require('dotenv')
 dotenv.config()
-
+const path = require('path')
 const aws = require('aws-sdk');
 
 const Jimp = require('jimp')
@@ -27,7 +27,7 @@ async function storeImage(imageLink, s3, model) {
             'Bucket': 'cmsnart',
             'ACL': 'public-read',
             'Body': thumb.buffer,
-            'Key': 'thumbs/' + Date.now().toString() + '.jpg',
+            'Key': 'thumbs/' + Date.now().toString() +'/' + thumb.originalName,
             'ContentType': 'image/jpeg'
         };
         let thumbStored = await s3.upload(thumbParams).promise();
@@ -37,18 +37,18 @@ async function storeImage(imageLink, s3, model) {
         //이미지 스토어
         const JIMP_SIZE = 360;
         const JIMP_Q = 85;
-        const image = await jimpImg(imageLink, JIMP_SIZE, JIMP_Q);
-        var imageParams = {
+        const small = await jimpImg(imageLink, JIMP_SIZE, JIMP_Q);
+        var smImageParams = {
             'Bucket': 'cmsnart',
             'ACL': 'public-read',
-            'Body': image.buffer,
-            'Key': 'images/' + Date.now().toString() + '.jpg',
+            'Body': small.buffer,
+            'Key': 'small/' + Date.now().toString() +'/' + small.originalName,
             'ContentType': 'image/jpeg'
         };
-        store.w = image.w;
-        store.h = image.h;
-        let imageStored = await s3.upload(imageParams).promise();
-        store.image = {key: imageStored.key, location: imageStored.Location};
+        store.w = small.w;
+        store.h = small.h;
+        let imageStored = await s3.upload(smImageParams).promise();
+        store.small = {key: imageStored.key, location: imageStored.Location};
         console.log(imageStored);
 
 
@@ -85,6 +85,7 @@ async function jimpImg(imageSrc, size, jpegQuality) {
         console.log("[dataParser.js] original Image size WH", image.bitmap.width, image.bitmap.height)
         //가로가길면 가로고정값...세로가길면 세로고정값
         //throw new Error('test error')
+        
         let resized;
         if (image.bitmap.width > image.bitmap.height) {
             resized = image.resize(size, Jimp.AUTO)
@@ -92,7 +93,7 @@ async function jimpImg(imageSrc, size, jpegQuality) {
             resized = image.resize(Jimp.AUTO, size)
         }
         return resized.quality(jpegQuality).getBufferAsync(Jimp.MIME_JPEG).then(buffer => {
-            return { ok: true, w: resized.getWidth(), h: resized.getHeight(), buffer: buffer }
+            return { ok: true, w: resized.getWidth(), h: resized.getHeight(), buffer: buffer, originalName:path.basename(imageSrc), ext: image.getExtension() }
         })
     }).catch(err => {
         throw err
@@ -108,13 +109,14 @@ async function jimpImg(imageSrc, size, jpegQuality) {
 async function thumbImg(imageSrc, size, jpegQuality) {
 
     console.log('[dataParser.js/jimpImg] Trying to jimp from src:', imageSrc);
+    
 
     return Jimp.read(imageSrc).then(image => {
         console.log("[dataParser.js] original Image size WH", image.bitmap.width, image.bitmap.height)
         //가로가길면 가로고정값...세로가길면 세로고정값
         let resized = image.cover(size, size)
         return resized.quality(jpegQuality).getBufferAsync(Jimp.MIME_JPEG).then(buffer => {
-            return { ok: true, w: resized.getWidth(), h: resized.getHeight(), buffer: buffer }
+            return { ok: true, w: resized.getWidth(), h: resized.getHeight(), buffer: buffer, originalName:path.basename(imageSrc), ext: image.getExtension() }
         })
     }).catch(err => {
         throw err
@@ -129,9 +131,12 @@ let s3 = new aws.S3({
     region: 'us-east-1'
 })
 
-const IMG_LINKS = ["https://pbs.twimg.com/media/D55k2hvUUAAfhMs.jpg", "https://pbs.twimg.com/media/D4WzlIdU4AENbQp.png", "https://pbs.twimg.com/media/D4Wzq1kUIAEhCVJ.png", "https://pbs.twimg.com/media/D5xwO1AUcAATSw1.jpg", "https://pbs.twimg.com/media/D46fNvVUYAAZ22h.jpg", "https://pbs.twimg.com/media/DzsREsqUwAAwu3m.jpg", "https://pbs.twimg.com/media/D04OzJuUwAATssy.png", "https://pbs.twimg.com/media/D24nm38U4AAiRIA.jpg", "https://pbs.twimg.com/media/D5kDgCEX4AEwMxR.jpg", "https://pbs.twimg.com/media/Dv95yLGUUAIRupl.jpg", "https://pbs.twimg.com/media/D2rI5tYU0AAdtEF.jpg", "https://pbs.twimg.com/media/D58Z1avVUAA6qC9.jpg", "https://pbs.twimg.com/media/D5P0NJuUUAAJ236.png", "https://pbs.twimg.com/media/D58Xb7nVUAALcCs.jpg"]
 
+//storeImage("https://pbs.twimg.com/media/D55k2hvUUAAfhMs.jpg", s3, Image) 
+
+const IMG_LINKS = ["https://pbs.twimg.com/media/D55k2hvUUAAfhMs.jpg", "https://pbs.twimg.com/media/D4WzlIdU4AENbQp.png", "https://pbs.twimg.com/media/D4Wzq1kUIAEhCVJ.png", "https://pbs.twimg.com/media/D5xwO1AUcAATSw1.jpg", "https://pbs.twimg.com/media/D46fNvVUYAAZ22h.jpg", "https://pbs.twimg.com/media/DzsREsqUwAAwu3m.jpg", "https://pbs.twimg.com/media/D04OzJuUwAATssy.png", "https://pbs.twimg.com/media/D24nm38U4AAiRIA.jpg", "https://pbs.twimg.com/media/D5kDgCEX4AEwMxR.jpg", "https://pbs.twimg.com/media/Dv95yLGUUAIRupl.jpg", "https://pbs.twimg.com/media/D2rI5tYU0AAdtEF.jpg", "https://pbs.twimg.com/media/D58Z1avVUAA6qC9.jpg", "https://pbs.twimg.com/media/D5P0NJuUUAAJ236.png", "https://pbs.twimg.com/media/D58Xb7nVUAALcCs.jpg"]
 
 IMG_LINKS.forEach( link => {
     storeImage(link, s3, Image) 
 });
+

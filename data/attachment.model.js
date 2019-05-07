@@ -4,7 +4,8 @@ module.exports = mongoose.model('attachment', {
     store: {
         w: Number,
         h: Number,
-        image: {key:String, location:String},
+        small: {key:String, location:String},
         thumb: {key:String, location:String}
     }
 })
+//움짤은...?
