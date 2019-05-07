@@ -83,14 +83,14 @@ async function jimpImg(imageSrc, size, jpegQuality) {
 
     return Jimp.read(imageSrc).then(image => {
         console.log("[dataParser.js] original Image size WH", image.bitmap.width, image.bitmap.height)
-        //가로가길면 가로고정값...세로가길면 세로고정값
+        //가로가길면 세로고정값...세로가길면 가로고정값 (즉 가로,세로 둘 다 최소크기를 넘김)
         //throw new Error('test error')
         
         let resized;
         if (image.bitmap.width > image.bitmap.height) {
-            resized = image.resize(size, Jimp.AUTO)
-        } else {
             resized = image.resize(Jimp.AUTO, size)
+        } else {
+            resized = image.resize(size, Jimp.AUTO)
         }
         return resized.quality(jpegQuality).getBufferAsync(Jimp.MIME_JPEG).then(buffer => {
             return { ok: true, w: resized.getWidth(), h: resized.getHeight(), buffer: buffer, originalName:path.basename(imageSrc), ext: image.getExtension() }
@@ -113,7 +113,6 @@ async function thumbImg(imageSrc, size, jpegQuality) {
 
     return Jimp.read(imageSrc).then(image => {
         console.log("[dataParser.js] original Image size WH", image.bitmap.width, image.bitmap.height)
-        //가로가길면 가로고정값...세로가길면 세로고정값
         let resized = image.cover(size, size)
         return resized.quality(jpegQuality).getBufferAsync(Jimp.MIME_JPEG).then(buffer => {
             return { ok: true, w: resized.getWidth(), h: resized.getHeight(), buffer: buffer, originalName:path.basename(imageSrc), ext: image.getExtension() }
