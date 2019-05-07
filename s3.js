@@ -121,14 +121,7 @@ async function thumbImg(imageSrc, size, jpegQuality) {
     })
 }
 
-let Image = mongoose.model('attachment', {
-    store: {
-        w: Number,
-        h: Number,
-        image: {key:String, location:String},
-        thumb: {key:String, location:String}
-    }
-})
+let Image = require('./data/attachment.model')
 
 let s3 = new aws.S3({
     accessKeyId: process.env.AWS_ACCESSKEY,
