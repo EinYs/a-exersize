@@ -82,6 +82,26 @@ export default {
           this.windowWidth / rsum < this.rowMaxHeight
             ? this.windowWidth / rsum
             : this.rowMaxHeight;
+        if( rowHeight < 150 ){
+            /*
+            rowHeight = 150
+            let fixedRatio = this.windowWidth / rowHeight
+            let diff = rsum - fixedRatio
+            let ratioArr = rowArr.map(a => {return a.r})
+            let base = fixedRatio/rowArr.length < Math.min.apply(null, ratioArr) ? fixedRatio/rowArr.length : Math.min.apply(null, ratioArr) // 마진을 구하기 위한 베이스
+            let marginTotal = 0;
+            for(let i=0; i< rowArr.length ; i++ ){
+                marginTotal += (rowArr[i].r - base)
+            }
+            console.log('[Gallery.vue] minHeight fix : ', fixedRatio, rsum, diff, rowArr, ratioArr,Math.min.apply(null, ratioArr), base, marginTotal)
+
+            for(let i=0; i< rowArr.length ; i++ ){
+                let my = rowArr[i].r
+                let mymargin = my - base
+                my = my - ( diff * mymargin / marginTotal )
+            }
+            */
+        }
         newRow.style.height = `${rowHeight}px`;
         newRow.style.backgroundColor = "black";
 
