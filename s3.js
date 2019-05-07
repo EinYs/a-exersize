@@ -1,56 +1,115 @@
-const aws = require('aws-sdk');
-const fs  = require('fs');
 const dotenv = require('dotenv')
+dotenv.config()
+
+const aws = require('aws-sdk');
+const fs = require('fs');
+
 const Jimp = require('jimp')
 const path = require('path');
+const mongoose = require('mongoose');
+mongoose.connect(process.env.DATABASE_URI, { useNewUrlParser: true, useFindAndModify: false }, function (err) {
+    if (err)
+        console.log(err)
+    else
+        console.log('mongodb connected ... ', process.env.DATABASE_URI)
+})
 
-dotenv.config()
+let Image = mongoose.model('attachment', {
+    store: {
+        w: Number,
+        h: Number,
+        key: String,
+        keythumb: String
+    }
+})
 
 let s3 = new aws.S3({
     accessKeyId: process.env.AWS_ACCESSKEY,
     secretAccessKey: process.env.AWS_SECRET,
-    region : 'us-east-1'
-
+    region: 'us-east-1'
 })
 
-jimpImg('https://pbs.twimg.com/media/D55s2R8UwAASOO3.png', 320, 80).then((buffer)=>{
+const IMG_LINK = "https://pbs.twimg.com/media/D55k2hvUUAAfhMs.jpg"
+let store = {}
+
+const THUMB_SIZE = 125
+const THUMB_Q = 85
+thumbImg(IMG_LINK, THUMB_SIZE, THUMB_Q).then(async (thumb) => {
     var param = {
-        'Bucket':'cmsnart',
-        'ACL':'public-read',
-        'Body':buffer,
-        'Key': 'image/' + Date.now().toString()+'.jpg',
-        'ContentType':'image/jpeg'
+        'Bucket': 'cmsnart',
+        'ACL': 'public-read',
+        'Body': thumb.buffer,
+        'Key': 'thumbs/' + Date.now().toString() + '.jpg',
+        'ContentType': 'image/jpeg'
     }
 
-    s3.upload(param, function(err, data){
-        if(err) {
-            console.log(err);
-        }else{
-            console.log(data);
-    
-        }
-    });
+    let res = await s3.upload(param).promise();
+    store.keythumb = res.Key
+    console.log(res);
 })
 
+const JIMP_SIZE = 360
+const JIMP_Q = 85
+jimpImg(IMG_LINK, JIMP_SIZE, JIMP_Q).then(async (image) => {
+    var param = {
+        'Bucket': 'cmsnart',
+        'ACL': 'public-read',
+        'Body': image.buffer,
+        'Key': 'images/' + Date.now().toString() + '.jpg',
+        'ContentType': 'image/jpeg'
+    }
 
+    let res = await s3.upload(param).promise();
+    console.log(res);
+})
 
-
-
-
-
-async function jimpImg(imageSrc, width, jpegQuality) {
+/**
+ * resize a image from src
+ * @param {} imageSrc 
+ * @param {*} size 
+ * @param {*} jpegQuality 
+ */
+async function jimpImg(imageSrc, size, jpegQuality) {
 
     console.log('[dataParser.js/jimpImg] Trying to jimp from src:', imageSrc);
 
     return Jimp.read(imageSrc).then(image => {
-        console.log("[dataParser.js] jimp Image size WH", image.bitmap.width, image.bitmap.height)
-        return image.resize(width, Jimp.AUTO).quality(jpegQuality).getBufferAsync(Jimp.MIME_JPEG)
-    }).then(buffer => {
-        console.info('[dataParser.js] Jimped Image');
-        return buffer //[{ type: 'photo', src: buffer, source: 'base64', media_url_https: it.image }]; // media_url_https depreciated
-        //console.log('<img src="'+buffer+'">');
+        console.log("[dataParser.js] original Image size WH", image.bitmap.width, image.bitmap.height)
+        //가로가길면 가로고정값...세로가길면 세로고정값
+        let resized;
+        if (image.bitmap.width > image.bitmap.height) {
+            resized = image.resize(size, Jimp.AUTO)
+        } else {
+            resized = image.resize(Jimp.AUTO, size)
+        }
+        return resized.quality(jpegQuality).getBufferAsync(Jimp.MIME_JPEG).then(buffer => {
+            return { ok: true, w: resized.getWidth(), h: resized.getHeight(), buffer: buffer }
+        })
     }).catch(err => {
         console.error(err);
+        return { ok: false }
     })
+}
 
+/**
+ * make square image from src
+ * @param {} imageSrc 
+ * @param {*} size 
+ * @param {*} jpegQuality 
+ */
+async function thumbImg(imageSrc, size, jpegQuality) {
+
+    console.log('[dataParser.js/jimpImg] Trying to jimp from src:', imageSrc);
+
+    return Jimp.read(imageSrc).then(image => {
+        console.log("[dataParser.js] original Image size WH", image.bitmap.width, image.bitmap.height)
+        //가로가길면 가로고정값...세로가길면 세로고정값
+        let resized = image.crop(size, size)
+        return resized.quality(jpegQuality).getBufferAsync(Jimp.MIME_JPEG).then(buffer => {
+            return { ok: true, w: resized.getWidth(), h: resized.getHeight(), buffer: buffer }
+        })
+    }).catch(err => {
+        console.error(err);
+        return { ok: false }
+    })
 }

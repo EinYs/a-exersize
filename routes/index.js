@@ -1,10 +1,15 @@
 const express = require('express');
 const router = express.Router();
 const path = require('path');
+const dotenv = require('dotenv')
+dotenv.config()
 
 let AWS = require("aws-sdk");
-AWS.config.loadFromPath(__dirname + "/../config/aws.json");
-let s3 = new AWS.S3();
+let s3 = new AWS.S3({
+    accessKeyId: process.env.AWS_ACCESSKEY,
+    secretAccessKey: process.env.AWS_SECRET,
+    region: 'us-east-1'
+});
 
 let multer = require("multer");
 let multerS3 = require('multer-s3');
