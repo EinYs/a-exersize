@@ -9,7 +9,7 @@ app.engine('html', require('ejs').renderFile);
 
 const SERVER_URL = 'localhost'
 app.use((req, res, next) => {
-    if (req.get('origin').includes(URL)) {
+    if (req.get('origin').includes(SERVER_URL)) {
         res.header("Content-Type", "text/html");
         res.header('Access-Control-Allow-Origin', `${req.get('origin')}`);        // localhost로부터의 요청에 응답한다
         res.header('Access-Control-Allow-Methods', 'PUT, DELETE');
